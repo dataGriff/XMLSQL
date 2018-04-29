@@ -1,0 +1,23 @@
+<Kennel>
+		<Dog> 
+			<Sex>M</Sex> 
+			<Name>Harvey</Name>
+			<Neutered>true</Neutered>
+			<Breed>German Shepherd</Breed>
+			<KennelArrivalDate>01-10-2014</KennelArrivalDate>
+		</Dog>
+		<Dog>
+			<Sex>F</Sex> 
+			<Name>Lucy</Name>
+			<Neutered>true</Neutered>
+			<Breed>Golden Retriever</Breed>
+			<KennelArrivalDate>15-12-2014</KennelArrivalDate>
+		</Dog>
+		<Dog> 
+			<Sex>M</Sex> 
+			<Name>Fudge</Name>
+			<Neutered>true</Neutered>
+			<Breed>American Bulldog</Breed>
+			<KennelArrivalDate>10-01-2015</KennelArrivalDate>
+		</Dog>
+	</Kennel>

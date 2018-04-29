@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SQL Server and XML</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; 
+              }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';  
+        font-weight: normal;
+        
+      }
+      .remark-code, .remark-inline-code {
+          font-family: 'Ubuntu Mono'; 
+                background: red;
+      }
+
+            .inverse {
+ 
+        color: #777872;
+        text-shadow: 0 0 20px #333;
+      }
+
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+<!--<img src="Images/SQLRelayLogo.PNG" style="width: 25%; height: 25%" />​-->
+
+
+
+# **SQL Server and XML **
+**Exploring the XML capabilitiers within SQL Server**
+
+Richard Griffiths ([DataGriff](www.DataGriff.com))
+
+Technical Lead at Confused.Com
+
+???
+
+---
+
+# Overview
+
+1. What is XML?
+2. XML Data Type in SQL
+3. Querying XML with XQuery function 
+4. Convert SQL into XML using XML FOR
+5. Create XML Schema using XML FOR
+6. Import XML into SQL using MERGE
+7. **Bonus Round!** Turning multiple rows into comma delimited single row group using XML PATH! 
+8. Summary 
+
+???
+
+---
+
+# What is XML? 
+
+* XML stands for Extensible Markup Language
+
+* The intent of XML is a universal and simple language that can describe data and objects across multiple environments
+
+* It is hierarchical in nature with nodes represented as attributes or elements
+
+* SSRS, SSIS and SSAS in SQL Server all use XML to encode their objects in their solution files
+
+???
+
+---
+
+# What is XML? 
+
+```XML
+<!-- This is a comment node-->
+<RootElementNode attribute="Root element attribute text">
+  <ElementNode>Text node</ElementNode>
+  <ElementNode>Text node 2
+	<NestedNode>Nested Text Node</NestedNode>
+  </ElementNode>
+</RootElementNode>
+```
+
+* Above shows the hierarchical node layout of XML
+
+* The outer most node in well-formed XML is the Root
+ 
+* Those nodes in <> are called elements
+	* The < is called a start tag and the > is called an end tag
+	
+* Those nodes where they’re attribute=“” are attributes
+
+* XML can often be element-centric or attribute-centric
+
+
+???
+
+---
+
+# What is XML? 
+
+* Some well-formed XML 
+
+* One or more elements, only one root element, and properly nested
+
+```XML
+<Hospital name="University Hospital of Wales">
+  <Patient sex="M" name="Bill Withers" age="40">
+    <Diagnosis>Diabetes</Diagnosis>
+    <AdmissionDate>01-10-2014</AdmissionDate>
+  </Patient>
+  <Patient sex="F" name="April O'Neil" age="32">
+    <Diagnosis>Broken Hip</Diagnosis>
+    <AdmissionDate>15-12-2014</AdmissionDate>
+  </Patient>
+  <Patient sex="M" name="Bruce Wayne" age="38">
+    <Diagnosis>Cholera</Diagnosis>
+    <AdmissionDate>10-01-2015</AdmissionDate>
+  </Patient>
+</Hospital>
+```
+
+???
+
+---
+
+# What is XML? 
+
+* An XML Fragment
+
+* Same rules as well-formed XML, just no outer root node
+
+```XML
+<Patient sex="M" name="Bill Withers" age="40">
+  <Diagnosis>Diabetes</Diagnosis>
+  <AdmissionDate>01-10-2014</AdmissionDate>
+</Patient>
+<Patient sex="F" name="April O'Neil" age="32">
+  <Diagnosis>Broken Hip</Diagnosis>
+  <AdmissionDate>15-12-2014</AdmissionDate>
+</Patient>
+<Patient sex="M" name="Bruce Wayne" age="38">
+  <Diagnosis>Cholera</Diagnosis>
+  <AdmissionDate>10-01-2015</AdmissionDate>
+</Patient>
+
+```
+
+???
+
+
+---
+
+# XML Data Type in SQL 
+
+
+* There is now an XML data type in SQL
+	(well there has been since 2005...)
+
+* You can store this in a variable or in a column just like any other data type
+
+* You can create schemas to validate your XML
+
+* You can even create special XML indexes on your XML data type to aid in querying
+
+
+???
+
+
+---
+
+# XQuery 
+
+* **XML.Query()**
+	* Allows you to query XML data type directly using a variety of syntax and functions
+* **XML.Value()**
+	* Allows you to retrieve a scalar value from XML data type and also used as part of Nodes() – see below
+* **XML.Exists()**
+	* Allows you to check whether particular value or node exists in the XML
+* **XML.Nodes()**
+	* Allows you to shred XML data into relational format
+
+
+???
+
+
+---
+
+# FOR XML Option    
+
+* FOR XML allows us to generate XML from a relational query
+
+* Place them at the end of your query
+	* SELECT col1, col2 FROM tab FOR **XML RAW**;
+	* SELECT col1, col2 FROM tab FOR **XML AUTO**;
+	* SELECT col1, col2 FROM tab FOR **XML PATH**;
+
+* Often have parameters to customise your XML output
+
+* One of these parameters allows the creation of an XML Schema to validate your XML against
+
+???
+
+---
+
+# FOR XML Option    
+
+* XML RAW
+	* Default for XML RAW is to create single outer node with name of <row> with the columns generated in an attribute-centric format
+* XML AUTO
+	* Default for XML AUTO is to generate a single outer node with name of the table or alias with the columns generated in an attribute-centric format
+	* Extra clause in XML AUTO using XMLSCHEMA allows generation of XML schema
+	* Make sure your columns are in right hierarchical order!
+* XML PATH
+	* Default is similar to XML RAW except returns in element-centric format
+	* However, this is the most customisable of the three options using alias syntax and parameters in the FOR clause
+
+???
+
+---
+
+# Create XML Schema 
+
+* You can use XML AUTO to generate an XML schema
+
+* This schema can be stored as a variable and then created as an XML SCHEMA COLLECTION in your database
+
+* This SCHEMA COLLECTION can then be added as part of your XML data type when used as a column or in a variable
+
+* Prevents inserting XML data that doesn’t match the schema
+
+???
+
+---
+
+# Import XML into SQL 
+
+* You can directly access an XML file stored in a file architecture using OPENROWSET
+
+* This XML can then be stored in a variable or table in SQL and queried using Xquery
+
+* In this case we want to shred the XML immediately into relational format using nodes()
+
+* Once we have shredded the data we can create a CTE around the output and MERGE into our relational table
+
+???
+
+---
+
+# Quick side: MERGE
+
+* Allows us to insert, update or delete all in one!
+
+```SQL
+MERGE INTO DestinationTable AS Tgt
+USING SourceTable AS Src ON
+src.KeyField = tgt.KeyField
+WHEN NOT MATCHED THEN 
+	INSERT (Col1, Col2, Col3)
+	VALUES (Col1, Col2, Col3)
+WHEN MATCHED AND  
+(
+ 	tgt.Col2 <> src.Col2 
+	OR tgt.Col3 <>  src.Col3 
+) THEN UPDATE 
+	SET  tgt.Col2 = src.Col2 
+	, tgt.Col3 =  src.Col3 
+WHEN NOT MATCHED 
+	THEN DELETE;
+```
+
+???
+
+---
+
+# Import XML into SQL 
+
+* First import new data directly into blank table from XML file using the MERGE
+
+* Second we show updating data from XML file using the same MERGE
+
+* Adding a DELETE element allows us to delete data when the XML file tells us so as part of our MERGE statement logic
+
+* XML is extremely flexible so you can add or remove elements easily
+
+???
+
+---
+
+# Bonus Round 
+
+* Can use XML to convert multiple-row data into a comma delimited row representation of the data
+
+* Useful for where multiple values of the same thing per an event (e.g. Diagnosis and Procedures during an admitted stay)
+
+* Best thing to do is take the logic and put it in a “common tools” repository as a function
+
+
+???
+
+---
+
+# Summary 
+
+* Should now understand the basic structure of XML
+
+* Realise that there is an XML data type in SQL
+
+* Can query XML directly in SQL using Xquery functions
+
+* Easy to shred XML data from a file and MERGE into a SQL table
+
+* Interesting uses of XML in SQL logic
+
+
+???
+
+---
+
+# Now go Shred some XML!   
+
+![alt text](Shredder.Png "Shredder!")
+
+???
+
+---
+
+# References  
+
+* [SQL MVP Deep Dives](https://www.amazon.co.uk/SQL-Server-MVP-Deep-Dives/dp/1935182048/ref=sr_1_1?ie=UTF8&qid=1426700664&sr=8-1&keywords=sql+mvp)
+
+* [SQL Server Querying 2012 Training Kit](https://www.amazon.co.uk/Training-Kit-Exam-70-461-Microsoft/dp/0735666059/ref=sr_1_1?ie=UTF8&qid=1426700703&sr=8-1&keywords=querying+2012)
+
+???
+
+---
+
+    </textarea>
+    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>

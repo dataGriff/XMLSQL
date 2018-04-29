@@ -1,0 +1,14 @@
+<Kennel>
+		<Dog> 
+			<Name>Ben</Name>
+		</Dog>
+		<Dog>
+			<Name>Trixie</Name>
+			<KennelArrivalDate>15-12-2014</KennelArrivalDate>
+		</Dog>
+		<Dog> 
+			<Name>Jack</Name>
+			<Neutered>true</Neutered>
+			<Breed>Jack Russel</Breed>
+		</Dog>
+	</Kennel>
