@@ -1,42 +1,31 @@
 # XML in SQL 
 
 ## Overview
-1. What is XML? What is its structure? What is well-formed XML?
-1. Demonstrate some XQuery
-1. Generate some test data for dogs entering kennels in a table
-1. Show XML FOR functionality
-1. Create XML schema for dogs entering kennels
-1. Shows schema validation and fails if not correct schema
-1. Import XML into SQL Table using MERGE
-1. Bonus round! Example use of XML in SQL
+1. [What is XML? What is its structure? What is well-formed XML?](#1.0-What-is-XML)
+1. [Demonstrate some XQuery](2.0-XQuery )
+1. [Generate some test data for dogs entering kennels in a table](#3.0-Generate-some-test-data-for-Dogs-arriving-in-Kennels-in-relational-format)
+1. [Show XML FOR functionality](#4.0-Show-XML-FOR-Option-Functionality)
+1. [Create XML schema from Relational Table](#5.0-Create-XML-Schema-using-a-Relational-Table-Structure)
+1. [Shows XML Schema Validation Works](#6.0-Prove-Create-XML-Schema-Works)
+1. [Import XML into SQL Table using MERGE](#7.0-Import-Data-from-XML-Files-into-SQL-Table )
+1. [Create CSV from Row Data](#8.0-Turning-rows-into-a-csv-group)
 
 ## 0.0 Create Database and Schema 
 
 Execute the below on your sql server to create the required database. 
 
 ```sql
---####################################################################
-RAISERROR('1.0 Create IndexDemo Database',10,0);
-GO
---####################################################################
 USE [Master]
 GO
-IF NOT EXISTS (SELECT * FROM SYS.databases WHERE name = 'IndexDemo')
+IF NOT EXISTS (SELECT * FROM SYS.databases WHERE name = 'XMLDemo')
 BEGIN
-CREATE DATABASE [IndexDemo];
+CREATE DATABASE [XMLDemo];
 END 
 GO 
 
-USE [IndexDemo]
+USE [XMLDemo]
 GO
---####################################################################
-RAISERROR('2.0 Create Schemas...',10,0);
-GO
---####################################################################
 DECLARE @sql NVARCHAR(255) = '';
---####################################################################
-RAISERROR('2.1 Create Schema Import',10,0);
---####################################################################
 IF SCHEMA_ID('tools') IS NULL
 BEGIN
 SET @Sql = 'CREATE SCHEMA [import];';
@@ -146,7 +135,7 @@ N'<Kennel name = "Coedely">
 		</Dog>
 	</Kennel>';
 
-SELECT @xml;
+SELECT @xml AS XMLtoQuery;
 
 PRINT '2.1.1 Query(): Get dogs';
 SELECT [QueryDogs] =  @xml.query(N'/Kennel/Dog');
@@ -624,8 +613,8 @@ FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_DELETE.xml'--change path to your e
 
 --SELECT @xml; --Look at XML variable here for debugging if required
 
-PRINT '7.3.4 Generate CTE of XML Data in Relational Format Using Nodes Function';
-PRINT 'Note: added delete column
+PRINT '7.3.3 Generate CTE of XML Data in Relational Format Using Nodes Function';
+PRINT 'Note: added delete column';
 ;WITH CTE AS
 (
 SELECT 
@@ -640,7 +629,7 @@ FROM @xml.nodes(N'//Kennel/*') Tab(Col)
 
 --SELECT * FROM CTE --Look at CTE output here for debugging if required
 
-PRINT '7.3.5 MERGE XML data from CTE into relational table';
+PRINT '7.3.4 MERGE XML data from CTE into relational table';
 MERGE INTO import.DogKennelArrival AS Tgt
 USING CTE AS Src ON
 src.Name = tgt.DogName
@@ -661,7 +650,7 @@ SET  tgt.DogSex = src.Sex
 WHEN MATCHED AND [Delete] = 'true'
 THEN DELETE;
 
-PRINT '7.3.6 Harvey has been deleted from the Kennel (I've taken him home!)';
+PRINT '7.3.5 Harvey has been deleted from the Kennel (I''ve taken him home!)';
 SELECT * FROM import.DogKennelArrival;
 
 GO
@@ -672,23 +661,20 @@ Execute the below to demonstrate insert of sparse XML data from file system usin
 ```sql
 USE XMLDemo;
 GO 
------------------------------------------------------------------------------
---6.4 INSERT SPARSE XML
------------------------------------------------------------------------------
+PRINT '7.4 INSERT SPARSE XML';
 
---6.4.1 Set Date Format and Declare XML Variable
+PRINT '7.4.1 Set Date Format and Declare XML Variable';
 SET DATEFORMAT DMY;
 DECLARE @xml XML;
 
---6.4.2 Use OPENROWSET to read XML file from filesystem 
+PRINT '7.4.2 Use OPENROWSET to read XML file from filesystem'; 
 SELECT @xml = BulkColumn
 FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_SPARSE.xml', SINGLE_BLOB) TempXML;
 
---6.4.3 Show XML Variable
-SELECT @xml;
+--SELECT @xml; --Look at XML variable here for debugging if required
 
---6.4.4 Generate CTE of XML Data in Relational Format Using Nodes Function
---Note: added delete column
+PRINT '7.4.3 Generate CTE of XML Data in Relational Format Using Nodes Function';
+PRINT 'Note: added delete column';
 ;WITH CTE AS
 (
 SELECT 
@@ -701,9 +687,9 @@ COALESCE(col.value(N'./Sex[1]',N'nvarchar(100)'),'') AS Sex
 FROM @xml.nodes(N'//Kennel/*') Tab(Col)
 )
 
---SELECT * FROM CTE; 
+--SELECT * FROM CTE --Look at CTE output here for debugging if required
 
---6.4.5 MERGE XML data from CTE into relational table
+PRINT '7.4.4 MERGE XML data from CTE into relational table';
 MERGE INTO import.DogKennelArrival AS Tgt
 USING CTE AS Src ON
 src.Name = tgt.DogName
@@ -734,28 +720,26 @@ Execute the below to demonstrate the addition of a column to the XML data from f
 ```sql
 USE XMLDemo;
 GO 
------------------------------------------------------------------------------
---6.5 Add Extra Field
------------------------------------------------------------------------------
 
---6.5.1 Add Extra Column
+PRINT '6.5 Add Extra Field';
+
+PRINT '6.5.1 Add Extra Column';
 ALTER TABLE import.DogKennelArrival
 ADD DogColour VARCHAR(25) NOT NULL DEFAULT '';
 GO
 
---6.5.1 Set Date Format and Declare XML Variable
+PRINT '6.5.2 Set Date Format and Declare XML Variable';
 SET DATEFORMAT DMY;
 DECLARE @xml XML;
 
---6.5.2 Use OPENROWSET to read XML file from filesystem 
+PRINT '6.5.3 Use OPENROWSET to read XML file from filesystem'; 
 SELECT @xml = BulkColumn
 FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_ADDITEM.xml', SINGLE_BLOB) TempXML;
 
---6.4.3 Show XML Variable
-SELECT @xml;
+--SELECT @xml; --Look at XML variable here for debugging if required
 
---6.4.4 Generate CTE of XML Data in Relational Format Using Nodes Function
---Note: added delete column
+PRINT '6.5.4 Generate CTE of XML Data in Relational Format Using Nodes Function';
+--Note: added delete column';
 ;WITH CTE AS
 (
 SELECT 
@@ -769,9 +753,9 @@ COALESCE(col.value(N'./Sex[1]',N'nvarchar(100)'),'') AS Sex
 FROM @xml.nodes(N'//Kennel/*') Tab(Col)
 )
 
---SELECT * FROM CTE; 
+--SELECT * FROM CTE --Look at CTE output here for debugging if required
 
---6.4.5 MERGE XML data from CTE into relational table
+PRINT '6.5.6 MERGE XML data from CTE into relational table';
 MERGE INTO import.DogKennelArrival AS Tgt
 USING CTE AS Src ON
 src.Name = tgt.DogName
@@ -799,7 +783,7 @@ SELECT * FROM import.DogKennelArrival;
 GO
 ```
 
-## 8.0 Bonus Round! Turning rows into a csv group
+## 8.0 Turning rows into a csv group
 
 This is really useful for multiple instances per event, e.g. diagnosis or procedures per an admission).
 
@@ -808,14 +792,14 @@ Execute the code below to see the row based data transform into a comma delimite
 ```sql
 USE XMLDemo;
 GO 
---8.1 Create small demo table of values
+PRINT '8.1 Create small demo table of values';
 DECLARE @Table1 TABLE(AdmissionID INT, Diagnosis VARCHAR(100));
 INSERT INTO @Table1 VALUES (1,'Heart Failure'),(1,'Brain Pain')
 ,(1,'Leg damage'),(1,'Knee twist'),(1,'Eye bulge')
 ,(2,'Cholera'),(3,'Tuberculosis'),(2,'Lurgy'),(3,'Spots');
 SELECT * FROM @Table1;
 
---8.2 Us XML path and Stuff to convert into comma delimited string
+PRINT '8.2 Us XML path and Stuff to convert into comma delimited string';
 SELECT  AdmissionID
        ,STUFF((SELECT ', ' + CAST(Diagnosis AS VARCHAR(10)) [text()]
          FROM @Table1 
@@ -828,7 +812,7 @@ GROUP BY AdmissionID;
 To demonstrate the speed of this, execute the following code, which first generates a million rows of data then performs the same logic as above!
 
 ```sql
---8.3.1 Create tally table to CROSS JOIN in part 2
+PRINT '8.3.1 Create tally table to CROSS JOIN in part 2';
 DECLARE @rows INT = 1000000;
 
 IF OBJECT_ID('tempdb..#tally') IS NOT NULL
@@ -848,7 +832,7 @@ FROM cte
 OPTION (MAXRECURSION 0);  
 GO 
 
---8.3.2 Va va voom!
+PRINT '8.3.2 Va va voom!';
 ;WITH CTE AS
 (
 SELECT n AS AdmissionID, Diagnosis FROM #tally
