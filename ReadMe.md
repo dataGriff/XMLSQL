@@ -7,7 +7,7 @@
 1. [Show XML FOR functionality](#4.0-Show-XML-FOR-Option-Functionality)
 1. [Create XML schema from Relational Table](#5.0-Create-XML-Schema-using-a-Relational-Table-Structure)
 1. [Shows XML Schema Validation Works](#6.0-Prove-Create-XML-Schema-Works)
-1. [Import XML into SQL Table using MERGE](#7.0-Import-Data-from-XML-Files-into-SQL-Table )
+1. [Import XML into SQL Table using MERGE](#7.0-Import-Data-from-XML-Files-into-SQL-Table)
 1. [Create CSV from Row Data](#8.0-Turning-rows-into-a-csv-group)
 
 ## 0.0 Create Database and Schema 
@@ -465,7 +465,7 @@ GO
 
 ## 7.0 Import Data from XML Files into SQL Table 
 
-The following code shows examples of inserts, updates and deletes from XML files (see the XMLImportFiles folder in repo) into SQL server. 
+The following code shows examples of inserts, updates and deletes from XML files (see the [XMLImportFiles](https://github.com/griff182uk/XMLSQL/tree/master/XMLImportFiles) folder in repo) into SQL server. 
 **IMPORTANT NOTE:** For this section to work you must have the XMLImportFiles folder locally and the filepath needs to be correct for the XMLImportFiles in the OPENROWSET bit! See notes on each script where the filepath is. 
 
 First we'll clear down our table, as it is this one we're going to insert into, by executing the below. 
