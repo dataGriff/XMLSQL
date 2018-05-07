@@ -20,16 +20,6 @@ GO
 CREATE SCHEMA import;
 GO
 
-/*
-Code to Clean Up Database when Needed 
-USE XMLDemo;
-IF OBJECT_ID('import.DogKennelArrival') IS NOT NULL
-DROP TABLE import.DogKennelArrival;
-IF OBJECT_ID('import.DogKennelArrivalXML') IS NOT NULL
-DROP TABLE import.DogKennelArrivalXML;
-IF OBJECT_ID('import.XMLDogKennelArrival') IS NOT NULL
-DROP XML SCHEMA COLLECTION import.XMLDogKennelArrival;
-*/
 
 /********************************************************************************************************************
 1.0 What is XML? 

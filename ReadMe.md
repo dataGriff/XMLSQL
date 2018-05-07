@@ -15,25 +15,33 @@
 Execute the below on your sql server to create the required database. 
 
 ```sql
-CREATE DATABASE XMLDemo;
+--####################################################################
+RAISERROR('1.0 Create IndexDemo Database',10,0);
 GO
-CREATE SCHEMA import;
+--####################################################################
+USE [Master]
 GO
-```
-
-#### Code to Clean Up Database when Needed 
-
-```sql
-/*
-USE XMLDemo;
+IF NOT EXISTS (SELECT * FROM SYS.databases WHERE name = 'IndexDemo')
+BEGIN
+CREATE DATABASE [IndexDemo];
+END 
 GO 
-IF OBJECT_ID('import.DogKennelArrival') IS NOT NULL
-DROP TABLE import.DogKennelArrival;
-IF OBJECT_ID('import.DogKennelArrivalXML') IS NOT NULL
-DROP TABLE import.DogKennelArrivalXML;
-IF OBJECT_ID('import.XMLDogKennelArrival') IS NOT NULL
-DROP XML SCHEMA COLLECTION import.XMLDogKennelArrival;
-*/
+
+USE [IndexDemo]
+GO
+--####################################################################
+RAISERROR('2.0 Create Schemas...',10,0);
+GO
+--####################################################################
+DECLARE @sql NVARCHAR(255) = '';
+--####################################################################
+RAISERROR('2.1 Create Schema Import',10,0);
+--####################################################################
+IF SCHEMA_ID('tools') IS NULL
+BEGIN
+SET @Sql = 'CREATE SCHEMA [import];';
+EXEC sp_executesql @sql;
+END
 ```
 
 ## 1.0 What is XML? 
@@ -41,7 +49,7 @@ XML stands for Extensible Markup Language. It's intent is a universal messaging 
 multiple environments. It is hierarchical in nature with nodes represented as attributes or elements nested
 within one another.  
 
-Below you can see some self describing XML.
+Below you can see some self describing XML which you can execute against your demo database. 
 
 ```sql
 USE XMLDemo;
@@ -59,9 +67,9 @@ SELECT @x;
 GO
 ```
 For XML to be well-formed it must have...
-	1. One of more elements
-	2. Only one root element
-	3. Elements properly nested within one another and dont overlap 
+1. One of more elements
+1. Only one root element
+1. Elements properly nested within one another and dont overlap 
 
 ```sql
 USE XMLDemo;
@@ -121,7 +129,7 @@ Execute all of the code below on the XMLDemo database and take a look at the out
 ```sql
 USE XMLDemo;
 GO
---2.1 Create an XML variable to Query 
+PRINT '2.1 Create an XML variable to Query';
 DECLARE @xml XML =
 N'<Kennel name = "Coedely">
 		<Dog sex="M" name="Harvey" neutered="true">
@@ -140,15 +148,15 @@ N'<Kennel name = "Coedely">
 
 SELECT @xml;
 
---2.1.1 Query(): Get dogs
+PRINT '2.1.1 Query(): Get dogs';
 SELECT [QueryDogs] =  @xml.query(N'/Kennel/Dog');
---2.1.2 Query(): Get dog breeds 
+PRINT '2.1.2 Query(): Get dog breeds ';
 SELECT [QueryDogBreeds] =  @xml.query(N'/Kennel/Dog/Breed');
---2.1.3 Query(): Get dog named Harvey
+PRINT '2.1.3 Query(): Get dog named Harvey';
 SELECT [QueryDogNamedHarvey] =  @xml.query(N'/Kennel/Dog[@name="Harvey"]');
---2.2 Value(): Get Breed where dog named fudge
+PRINT '2.2 Value(): Get Breed where dog named fudge';
 SELECT [ValueFudgeBreed] =  @xml.value(N'(/Kennel/Dog[@name="Fudge"]/Breed)[1]', N'nvarchar(100)');
---2.3 Exist():  Using Exist Function in CASE
+PRINT '2.3 Exist():  Using Exist Function in CASE';
 SELECT [ExistLucy] =  CASE @xml.exist
 (
 N'/Kennel/Dog[@name="Lucy"]'
@@ -156,7 +164,7 @@ N'/Kennel/Dog[@name="Lucy"]'
 WHEN 1 THEN N'The kennel has a dog named Lucy'
 WHEN 0 THEN N'The kennel does not have a dog named Lucy'
 END;
---2.4 Nodes(); Shred XML Data into Relational Format
+PRINT '2.4 Nodes(); Shred XML Data into Relational Format';
 SELECT 
 col.value(N'./@sex[1]',N'nvarchar(100)') AS Sex
 ,col.value(N'./@name[1]',N'nvarchar(100)') AS Name
@@ -169,32 +177,38 @@ GO
 
 ## 3.0 Generate some test data for Dogs arriving in Kennels in relational format
 
-Run the code below on your database so that we can use the data in later parts... 
+Run the code below on your database so that we can use the table and data in later parts... 
 
 ```sql
 USE XMLDemo;
 GO
---DROP TABLE import.DogKennelArrival
---SELECT * FROM import.DogKennelArrival
+PRINT '3.1  Drop Dog Kennel Arrival table if already exists';
+IF OBJECT_ID('import.DogKennelArrival') IS NOT NULL
+	DROP TABLE import.DogKennelArrival;
+GO 
+
+PRINT '3.2  Create Dog Kennel Arrival table';
 CREATE TABLE import.DogKennelArrival
 (
-[id] INT IDENTITY PRIMARY KEY CLUSTERED
-,[FirstInserted] DATETIME NOT NULL DEFAULT GETDATE()
-,[LastUpdated] DATETIME NOT NULL DEFAULT GETDATE()
+[id] INT IDENTITY CONSTRAINT PK_import_DogKennelArrival PRIMARY KEY CLUSTERED 
+,[FirstInserted] DATETIME2 NOT NULL CONSTRAINT DF_import_DogKennelArrival_FirstInserted DEFAULT SYSUTCDATETIME()
+,[LastUpdated] DATETIME2 NOT NULL CONSTRAINT DF_import_DogKennelArrival_LastUpdated DEFAULT SYSUTCDATETIME()
 ,[DogName] VARCHAR(25) NOT NULL CONSTRAINT UNQ_DogKennelArrival_DogName UNIQUE
 ,[DogSex] VARCHAR(8) NOT NULL
 ,[DogNeutered] BIT NOT NULL
 ,[DogBreed] VARCHAR(50) NOT NULL
 ,[KennelArrivalDate] DATE NOT NULL
-)
+);
+GO 
 
+PRINT '3.3  Insert dogs into kennel arrival table';
 INSERT INTO import.DogKennelArrival
 (
 [DogName],[DogSex] ,[DogNeutered],[DogBreed] ,[KennelArrivalDate] 
 )
 VALUES ('Harvey','M',1,'German Shepherd','01-Oct-2014')
 , ('Lucy','F',1,'Labrador','15-Dec-2014')
-, ('Fudge','M',0,'American Bulldog','10-Jan-2015')
+, ('Fudge','M',0,'American Bulldog','10-Jan-2015');
 
 GO
 ```
@@ -210,17 +224,17 @@ Execute the below on the XMLDemo database to see examples of XML RAW.
 ```sql
 USE XMLDemo;
 GO 
---4.1 XML Raw-----------------------------------------------------------
---4.1.1 XML Raw Default (attributes)
+PRINT '4.1 XML Raw';
+PRINT '4.1.1 XML Raw Default (attributes)';
 DECLARE @xml XML;
 SET @xml = (SELECT 
 [DogName],[DogSex] ,[DogNeutered],[DogBreed] ,[KennelArrivalDate] 
 FROM import.DogKennelArrival
-FOR XML RAW)
+FOR XML RAW);
 SELECT @xml AS 'XMLRawDefault';
 GO
 
---4.1.2 XML Raw ElementsXML 
+PRINT '4.1.2 XML Raw ElementsXML';
 DECLARE @xml XML;
 SET @xml = (SELECT 
 [DogName],[DogSex] ,[DogNeutered],[DogBreed] ,[KennelArrivalDate] 
@@ -242,8 +256,8 @@ Execute the below on the XMLDemo database to see examples of XML AUTO.
 ```sql
 USE XMLDemo;
 GO 
---4.2 XML AUTO----------------------------------------------------------
---4.2.1 XML Auto Default (attributes)
+PRINT '4.2 XML AUTO';
+PRINT '4.2.1 XML Auto Default (attributes)';
 DECLARE @xml XML;
 SET @xml = (SELECT 
 [DogName],[DogSex] ,[DogNeutered],[DogBreed] ,[KennelArrivalDate] 
@@ -252,7 +266,7 @@ FOR XML AUTO);
 SELECT @xml AS 'XMLAutoDefault';
 GO
 
---4.2.2 XML Auto Elements 
+PRINT '4.2.2 XML Auto Elements'; 
 DECLARE @xml XML;
 SET @xml = (SELECT 
 [DogName],[DogSex] ,[DogNeutered],[DogBreed] ,[KennelArrivalDate] 
@@ -261,7 +275,7 @@ FOR XML AUTO, ELEMENTS);
 SELECT @xml AS 'XMLAutoElements';
 GO
 
---4.2.3 XML Auto with Alias 
+PRINT '4.2.3 XML Auto with Alias'; 
 DECLARE @xml XML;
 SET @xml = (SELECT 
 Dog.[DogName],Dog.[DogSex] ,Dog.[DogNeutered],Dog.[DogBreed] ,Dog.[KennelArrivalDate] 
@@ -283,8 +297,8 @@ Execute the below on the XMLDemo database to see examples of XML PATH.
 ```sql
 USE XMLDemo;
 GO 
---4.3 XML Path-----------------------------------------------------------
---4.3.1 XML Path Default (elements)
+PRINT '4.3 XML Path';
+PRINT '4.3.1 XML Path Default (elements)';
 DECLARE @xml XML;
 SET @xml = (SELECT 
 [DogName],[DogSex] ,[DogNeutered],[DogBreed] ,[KennelArrivalDate] 
@@ -293,7 +307,7 @@ FOR XML PATH);
 SELECT @xml AS 'XMLPathDefault';
 GO
 
---4.3.2 XML Path with Outer Node and Root Param (well-formed XML)
+PRINT '4.3.2 XML Path with Outer Node and Root Param (well-formed XML)';
 DECLARE @xml XML;
 SET @xml = (SELECT 
 [DogName],[DogSex] ,[DogNeutered],[DogBreed] ,[KennelArrivalDate] 
@@ -302,7 +316,7 @@ FOR XML PATH('Dog'), root('Kennel'));
 SELECT @xml AS 'XMLPathParameters';
 GO
 
---4.3.3 XML Path with Attributes and Path Specified
+PRINT '4.3.3 XML Path with Attributes and Path Specified';
 DECLARE @xml XML;
 SET @xml = (SELECT 
 [DogName] AS '@name',[DogSex] ,[DogNeutered],[DogBreed] 
@@ -317,25 +331,24 @@ GO
 
 You can create an XML schema from a relational table (created in part 3) by capturing the schema and then capturing it when creating a schema collection.
 
-Execute the below on the XMLDemo database to create an XML schema. 
+Execute the below on the XMLDemo database to create an XML schema from the DogKennelArrival relational table. 
 
 ```sql
 USE XMLDemo;
 GO 
---5.1 Declare schema variable
-DECLARE @myschema NVARCHAR(MAX)
+PRINT '5.1 Declare schema variable';
+DECLARE @myschema NVARCHAR(MAX);
 SET @myschema = N''
---5.2 Set Schema Variable using XML AUTO, ELEMENTS and XMLSCHEMA option
+PRINT '5.2 Set Schema Variable using XML AUTO, ELEMENTS and XMLSCHEMA option';
 SET @myschema = (SELECT 
 Dog.[DogName],Dog.[DogSex] ,Dog.[DogNeutered],Dog.[DogBreed] ,Dog.[KennelArrivalDate] 
 FROM import.DogKennelArrival Dog
 WHERE 1=0
 FOR XML AUTO, ELEMENTS, XMLSCHEMA('DogNameSpace'));
---5.3 Look at schema
-SELECT CAST(@myschema AS XML);
---5.4 Create Schema Collection
+PRINT '5.3 Select the schemas as an output to look at';
+SELECT CAST(@myschema AS XML) AS 'XMLSchemaCreated';
+PRINT '5.4 Create Schema Collection'
 CREATE XML SCHEMA COLLECTION import.XMLDogKennelArrival AS @myschema;
---DROP XML SCHEMA COLLECTION import.XMLDogKennelArrival;
 GO
 ```
 
@@ -353,10 +366,14 @@ Execute the below on the XMLDemo database to see the validation of the XML schem
 ```sql
 USE XMLDemo;
 GO 
---6.1 Create Table
---DROP TABLE import.DogKennelArrivalXML;
---TRUNCATE TABLE import.DogKennelArrivalXML;
---SELECT * FROM import.DogKennelArrivalXML
+USE XMLDemo;
+GO
+PRINT '6.1  Drop Dog Kennel Arrival XML table if already exists';
+IF OBJECT_ID('import.DogKennelArrivalXML') IS NOT NULL
+	DROP TABLE import.DogKennelArrivalXML;
+GO 
+
+PRINT '6.2  Create Dog Kennel Arrival XML table with schema specified on XML Column';
 CREATE TABLE import.DogKennelArrivalXML
 (
 [id] INT IDENTITY PRIMARY KEY CLUSTERED
@@ -366,7 +383,7 @@ CREATE TABLE import.DogKennelArrivalXML
 );
 GO
 
---6.2 Insert Valid XML 
+PRINT '6.3 Insert Valid XML Succesfully';
 INSERT INTO import.DogKennelArrivalXML
 (
 [XML]
@@ -395,8 +412,8 @@ SELECT '<Dog xmlns="DogNameSpace">
 </Dog>';
 GO
 
---6.3 Insert Invalid XML (according to defined schema) = Fails
---Invalid because have extra node of DogColour not defined in the schema
+PRINT '6.3 Insert Invalid XML and it fails';
+PRINT 'It is invalid because it has an extra node of DogColour not defined in the schema';
 INSERT INTO import.DogKennelArrivalXML
 (
 [XML]
@@ -411,8 +428,12 @@ SELECT '<Dog xmlns="DogNameSpace">
   <KennelArrivalDate>2014-10-01</KennelArrivalDate>
 </Dog>';
 GO
+```
 
---6.4 Declare Variable with Schema Validation for Valid Data = Works Fine
+You can see the same behaviour if you declare an XML variable with the schema specified. 
+
+```sql
+PRINT '6.4 Declare Variable with Schema Validation for Valid Data and it Works Fine';
 DECLARE @xml XML (import.XMLDogKennelArrival) = 
 N'<Dog xmlns="DogNameSpace">
   <DogName>Harvey</DogName>
@@ -438,8 +459,8 @@ N'<Dog xmlns="DogNameSpace">
 SELECT @xml;
 GO
 
---6.5 Declare Variable with Schema Validation for Invalid Data = Fails
---Invalid because have extra node of DogColour not defined in the schema
+PRINT '6.5 Declare Variable with Schema Validation for invalid data and it fails';
+PRINT 'It is invalid because it has an extra node of DogColour not defined in the schema';
 DECLARE @xml XML (import.XMLDogKennelArrival) = 
 N'<Dog xmlns="DogNameSpace">
   <DogName>Harvey</DogName>
@@ -456,9 +477,9 @@ GO
 ## 7.0 Import Data from XML Files into SQL Table 
 
 The following code shows examples of inserts, updates and deletes from XML files (see the XMLImportFiles folder in repo) into SQL server. 
-**IMPORTANT NOTE:** For this section to work you must have the XMLImportFiles folder locally and the filepath needs to be correct for the XMLImportFiles in the OPENROWSET bit!
+**IMPORTANT NOTE:** For this section to work you must have the XMLImportFiles folder locally and the filepath needs to be correct for the XMLImportFiles in the OPENROWSET bit! See notes on each script where the filepath is. 
 
-Below demonstrates first insert of XML data from file system using CTE generated from nodes() and simple MERGE
+First we'll clear down our table, as it is this one we're going to insert into, by executing the below. 
 
 ```sql
 USE XMLDemo;
@@ -466,23 +487,26 @@ GO
 TRUNCATE TABLE import.DogKennelArrival;
 SELECT * FROM import.DogKennelArrival;
 GO
------------------------------------------------------------------------------
---7.1 INSERT XML DATA 
------------------------------------------------------------------------------
+```
 
---7.1.1 Set Date Format and Declare XML Variable
+Below demonstrates first insert of XML data from the file system using CTE generated from nodes() and a simple MERGE.
+
+```sql
+
+PRINT '7.1 INSERT XML DATA'; 
+
+PRINT '7.1.1 Set Date Format and Declare XML Variable';
 SET DATEFORMAT DMY;
 DECLARE @xml XML;
 
---7.1.2 Use OPENROWSET to read XML file from filesystem 
+PRINT '7.1.2 Use OPENROWSET to read XML file from filesystem';
 SELECT @xml = BulkColumn
-FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_INSERT.xml'
+FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_INSERT.xml' --change path to your environment
 , SINGLE_BLOB) TempXML;
 
---7.1.3 Show XML Variable
---SELECT @xml;
+--SELECT @xml; --Look at XML variable here for debugging if required
 
---7.1.4 Generate CTE of XML Data in Relational Format Using Nodes Function
+PRINT '7.1.3 Generate CTE of XML Data in Relational Format Using Nodes Function';
 ;WITH CTE AS
 (
 SELECT 
@@ -494,9 +518,9 @@ col.value(N'./Sex[1]',N'nvarchar(100)') AS Sex
 FROM @xml.nodes(N'//Kennel/*') Tab(Col)
 )
 
---SELECT * FROM CTE 
+--SELECT * FROM CTE --Look at CTE output here for debugging if required
 
---7.1.5 MERGE XML data from CTE into relational table
+PRINT '7.1.4 MERGE XML data from CTE into relational table';
 MERGE INTO import.DogKennelArrival AS Tgt
 USING CTE AS Src ON
 src.Name = tgt.DogName
@@ -516,7 +540,7 @@ SET  tgt.DogSex = src.Sex
 ,  tgt.KennelArrivalDate = src.KennelArrivalDate ;
 
 
---7.1.6 Show data successfully MERGED (INSERT) into SQL table
+PRINT '7.1.5 Show data successfully MERGED (INSERT) into SQL table';
 SELECT * FROM import.DogKennelArrival;
 
 GO
@@ -527,23 +551,22 @@ Execute the below to demonstrate the update of XML data from file system using C
 ```sql
 USE XMLDemo;
 GO 
------------------------------------------------------------------------------
---7.2 UPDATE XML DATA 
------------------------------------------------------------------------------
 
---7.2.1 Set Date Format and Declare XML Variable
+PRINT '7.2 UPDATE XML DATA'; 
+
+
+PRINT '7.2.1 Set Date Format and Declare XML Variable';
 SET DATEFORMAT DMY;
 DECLARE @xml XML;
 
---7.2.2 Use OPENROWSET to read XML file from filesystem 
+PRINT '7.2.2 Use OPENROWSET to read XML file from filesystem';
 SELECT @xml = BulkColumn
-FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_UPDATE.xml'
+FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_UPDATE.xml'--change path to your environment
 , SINGLE_BLOB) TempXML;
 
---7.2.3 Show XML Variable
-SELECT @xml;
+--SELECT @xml; --Look at XML variable here for debugging if required
 
---7.2.4 Generate CTE of XML Data in Relational Format Using Nodes Function
+PRINT '7.2.3 Generate CTE of XML Data in Relational Format Using Nodes Function';
 ;WITH CTE AS
 (
 SELECT 
@@ -555,9 +578,9 @@ col.value(N'./Sex[1]',N'nvarchar(100)') AS Sex
 FROM @xml.nodes(N'//Kennel/*') Tab(Col)
 )
 
---SELECT * FROM CTE 
+--SELECT * FROM CTE --Look at CTE output here for debugging if required
 
---7.2.5 MERGE XML data from CTE into relational table
+PRINT '7.2.4 MERGE XML data from CTE into relational table';
 MERGE INTO import.DogKennelArrival AS Tgt
 USING CTE AS Src ON
 src.Name = tgt.DogName
@@ -576,8 +599,8 @@ SET  tgt.DogSex = src.Sex
 ,  tgt.DogBreed = src.Breed 
 ,  tgt.KennelArrivalDate = src.KennelArrivalDate ;
 
---7.2.6 Can see that UPDATES have taken place
---Fudge is now neutered and Lucy is in fact a Golden Retriever!
+PRINT '7.2.6 Can see that UPDATES have taken place';
+PRINT 'Fudge is now neutered and Lucy is in fact a Golden Retriever!';
 SELECT * FROM import.DogKennelArrival;
 
 GO
@@ -588,24 +611,21 @@ Execute the below to demonstrate delete of XML data from file system using CTE g
 ```sql
 USE XMLDemo;
 GO 
------------------------------------------------------------------------------
---7.3 DELETE XML DATA - (MERGE STATEMENT HAS EXTRA DELETE CRITERIA)
------------------------------------------------------------------------------
+PRINT '7.3 DELETE XML DATA - (MERGE STATEMENT HAS EXTRA DELETE CRITERIA)';
 
---7.3.1 Set Date Format and Declare XML Variable
+PRINT '7.3.1 Set Date Format and Declare XML Variable';
 SET DATEFORMAT DMY;
 DECLARE @xml XML;
 
---7.3.2 Use OPENROWSET to read XML file from filesystem 
+PRINT '7.3.2 Use OPENROWSET to read XML file from filesystem';
 SELECT @xml = BulkColumn
-FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_DELETE.xml'
+FROM OPENROWSET(BULK '\XMLImportFiles\XML_Dog_DELETE.xml'--change path to your environment
 , SINGLE_BLOB) TempXML;
 
---7.3.3 Show XML Variable
-SELECT @xml;
+--SELECT @xml; --Look at XML variable here for debugging if required
 
---7.3.4 Generate CTE of XML Data in Relational Format Using Nodes Function
---Note: added delete column
+PRINT '7.3.4 Generate CTE of XML Data in Relational Format Using Nodes Function';
+PRINT 'Note: added delete column
 ;WITH CTE AS
 (
 SELECT 
@@ -618,9 +638,9 @@ col.value(N'./Sex[1]',N'nvarchar(100)') AS Sex
 FROM @xml.nodes(N'//Kennel/*') Tab(Col)
 )
 
---select * from cte;
+--SELECT * FROM CTE --Look at CTE output here for debugging if required
 
---7.3.5 MERGE XML data from CTE into relational table
+PRINT '7.3.5 MERGE XML data from CTE into relational table';
 MERGE INTO import.DogKennelArrival AS Tgt
 USING CTE AS Src ON
 src.Name = tgt.DogName
@@ -641,7 +661,7 @@ SET  tgt.DogSex = src.Sex
 WHEN MATCHED AND [Delete] = 'true'
 THEN DELETE;
 
---7.3.6 Harvey has been deleted from the Kennel (I've taken him home!)
+PRINT '7.3.6 Harvey has been deleted from the Kennel (I've taken him home!)';
 SELECT * FROM import.DogKennelArrival;
 
 GO
